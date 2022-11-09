@@ -1,0 +1,57 @@
+-- Creating Account table--  
+create table Account(Accountno int ,CustomerName varchar(40),Balance float);
+
+-- Inserting values to account table --  
+insert into account values (111,"Ashik",1000.0);
+insert into account values (222,"Loki",1500.0);
+insert into account values (333,"Nandish",2000.0);
+insert into account values (444,"Darshini",2500.0);
+insert into account values (555,'Rahul',25000.0);
+
+-- Creating Account table --
+create table Account_Updates(Accountno int primary key,CustomerName varchar(40),Change_at timestamp,Before_balance numeric(10,2),After_balance numeric(10,2));
+
+-- Creating trigger for after_withdrawl --
+delimiter $$
+create trigger after_withdrawl after update on Account for each row
+begin
+if(old.Balance>new.Balance) then
+insert into Account_Updates(Accountno,CustomerName,Change_at,Before_balance,After_balance,type)
+		values(old.Accountno,old.CustomerName,now(),old.Balance,new.Balance,'debit');
+end if;
+end$$
+
+-- Creating trigger for after_deposit --
+delimiter $$
+create trigger after_deposit after update on Account for each row
+begin
+if(old.Balance<new.Balance) then
+insert into Account_Updates(Accountno,CustomerName,Change_at,Before_balance,After_balance,type)
+		values(old.Accountno,old.CustomerName,now(),old.Balance,new.Balance,'credit');
+end if;
+end$$
+
+-- To drop the Triggers --
+drop trigger after_withdrawl
+drop trigger after_deposit
+
+-- Updating the account table with new balance --
+update account set Balance=(Balance-500) where Accountno=222;
+update account set Balance=(Balance+500) where Accountno=111;
+
+-- creating procedure to get the sum of withdrawal and deposit --
+delimiter $$
+create procedure Sumwithdrawl(in acc_No int, out totalDebit numeric(10,2), out totalCredit numeric(10,2))
+begin
+select sum(Before_balance-After_balance) into totalDebit from account_updates where  type='debit' and Accountno=acc_No;
+select sum(After_balance-Before_balance) into totalCredit from account_updates where  type='credit' and Accountno=acc_No;
+end $$
+
+-- To drop the procedure --
+drop procedure Sumwithdrawl;
+
+-- Calling the procedure
+call Sumwithdrawl(222, @totalDebit,@totalCredit);  -- this is only to store
+
+-- Printing the called procedure
+select @totalDebit,@totalCredit   --  this is to print
